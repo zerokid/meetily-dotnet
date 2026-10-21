@@ -43,6 +43,16 @@ public class AudioRecorder : IAudioRecorder
         var devices = new List<AudioDevice>();
         using var enumerator = new MMDeviceEnumerator();
         var endpoints = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+        string defaultId = string.Empty;
+        try
+        {
+            var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            defaultId = defaultDevice.ID;
+        }
+        catch
+        {
+            // Fallback if no default endpoint found
+        }
 
         int index = 0;
         foreach (var endpoint in endpoints)
@@ -51,7 +61,7 @@ public class AudioRecorder : IAudioRecorder
             {
                 Id = index++,
                 Name = endpoint.FriendlyName,
-                IsDefault = endpoint.Selected
+                IsDefault = !string.IsNullOrEmpty(defaultId) && endpoint.ID == defaultId
             });
         }
         return devices;

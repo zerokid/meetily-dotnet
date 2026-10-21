@@ -86,20 +86,7 @@ public class WhisperTranscriptionService : ITranscriptionService
         var segments = new List<TranscriptSegment>();
 
         using var whisperFactory = WhisperFactory.FromPath(modelPath);
-        var builder = whisperFactory.CreateBuilder()
-            .WithSegmentEventHandler((segmentData) =>
-            {
-                var segment = new TranscriptSegment
-                {
-                    StartSeconds = segmentData.Start.TotalSeconds,
-                    EndSeconds = segmentData.End.TotalSeconds,
-                    Text = segmentData.Text.Trim(),
-                    Confidence = segmentData.Probability
-                };
-
-                segments.Add(segment);
-                SegmentDiscovered?.Invoke(this, segment);
-            });
+        var builder = whisperFactory.CreateBuilder();
 
         if (language != "auto" && !string.IsNullOrWhiteSpace(language))
         {
@@ -110,7 +97,20 @@ public class WhisperTranscriptionService : ITranscriptionService
 
         StatusChanged?.Invoke(this, "Transcribing audio...");
         using var fileStream = File.OpenRead(audioFilePath);
-        await processor.ProcessAsync(fileStream, cancellationToken);
+
+        await foreach (var segmentData in processor.ProcessAsync(fileStream, cancellationToken))
+        {
+            var segment = new TranscriptSegment
+            {
+                StartSeconds = segmentData.Start.TotalSeconds,
+                EndSeconds = segmentData.End.TotalSeconds,
+                Text = segmentData.Text.Trim(),
+                Confidence = segmentData.Probability
+            };
+
+            segments.Add(segment);
+            SegmentDiscovered?.Invoke(this, segment);
+        }
 
         StatusChanged?.Invoke(this, "Transcription completed.");
         return segments;

@@ -38,6 +38,13 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true `
           --output ./publish
 
+    - name: Download Whisper Base Model
+      run: |
+        New-Item -ItemType Directory -Force -Path ./publish/models
+        Write-Host "Downloading ggml-base.bin model..."
+        Invoke-WebRequest -Uri "https://huggingface.co/chatgpt-openai/ggml-model-whisper/resolve/main/ggml-base.en.bin" -OutFile "./publish/models/ggml-base.bin"
+        Write-Host "Model downloaded successfully to ./publish/models/ggml-base.bin"
+
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
       with:
