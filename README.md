@@ -69,8 +69,8 @@ flowchart TD
 ## 🚀 Quick Start
 
 ### Option 1: Download Pre-built Executable (No compiling!)
-1. Go to the **[Actions Tab](https://github.com/zerokid/meetily-dotnet/actions)** or **Releases**.
-2. Download the latest `Meetily-Windows-x64.zip`.
+1. Go to **[Releases](https://github.com/zerokid/meetily-dotnet/releases)** or the **[Actions Tab](https://github.com/zerokid/meetily-dotnet/actions)**.
+2. Download `Meetily-Windows-x64` and the pre-uploaded **`ggml-base.bin`** from [Release v0.1.0](https://github.com/zerokid/meetily-dotnet/releases/tag/v0.1.0).
 3. Extract and run `Meetily.App.exe`.
 
 ---
