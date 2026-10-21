@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meetily .NET - Local AI Meeting Assistant</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --sidebar: #1e293b;
+      --card: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --success: #10b981;
+      --accent: #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    /* Sidebar */
+    .sidebar {
+      width: 320px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+    }
+    .brand {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    .brand-text h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.5px; }
+    .brand-text span { font-size: 0.75rem; color: var(--accent); }
+    .search-box {
+      padding: 16px 20px 8px;
+    }
+    .search-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      outline: none;
+      font-size: 0.85rem;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .meetings-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .meeting-item {
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .meeting-item:hover, .meeting-item.active {
+      border-color: var(--primary);
+      background: #1e1b4b;
+    }
+    .meeting-item-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .meeting-item-meta { font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; }
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-settings {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .btn-settings:hover { color: var(--text); border-color: var(--text-muted); }
+
+    /* Main Area */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .topbar {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #131d31;
+    }
+    .recording-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .btn-record {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--danger);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-record:hover { background: var(--danger-hover); }
+    .btn-record.recording {
+      background: #475569;
+    }
+    .timer-badge {
+      font-family: monospace;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--text);
+    }
+    .audio-meter {
+      width: 120px;
+      height: 8px;
+      background: #334155;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .audio-meter-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--success);
+      transition: width 0.08s linear;
+    }
+
+    /* Content Area */
+    .content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 18px;
+      background: #192437;
+      border-bottom: 1px solid var(--card-border);
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-body {
+      padding: 18px;
+      flex: 1;
+      overflow-y: auto;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .transcript-segment {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: #111a2e;
+      border-radius: 6px;
+      border-left: 3px solid var(--primary);
+    }
+    .segment-time {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-family: monospace;
+      margin-bottom: 4px;
+    }
+    .action-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      background: #111a2e;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+    .action-item input[type="checkbox"] {
+      accent-color: var(--primary);
+    }
+    .topic-tag {
+      display: inline-block;
+      background: #312e81;
+      color: #c7d2fe;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal.open { display: flex; }
+    .modal-box {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      width: 480px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label { font-size: 0.8rem; color: var(--text-muted); }
+    .form-group input, .form-group select {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">M</div>
+      <div class="brand-text">
+        <h1>Meetily .NET</h1>
+        <span>100% Local AI Meeting Notes</span>
+      </div>
+    </div>
+    <div class="search-box">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search transcripts...">
+    </div>
+    <div class="meetings-list" id="meetingsList">
+      <!-- Populated via Bridge -->
+    </div>
+    <div class="sidebar-footer">
+      <span style="font-size: 0.75rem; color: var(--text-muted);">C# + WebView2</span>
+      <button class="btn-settings" id="btnSettings">Settings</button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <header class="topbar">
+      <div class="recording-controls">
+        <button class="btn-record" id="btnRecord">
+          <span id="recordDot">●</span>
+          <span id="recordText">Record Meeting</span>
+        </button>
+        <span class="timer-badge" id="recordTimer">00:00:00</span>
+        <div class="audio-meter">
+          <div class="audio-meter-bar" id="audioBar"></div>
+        </div>
+      </div>
+      <div>
+        <span id="statusIndicator" style="font-size: 0.85rem; color: var(--accent);">Ready</span>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- Transcripts -->
+      <section class="card">
+        <div class="card-header">
+          <span>Live Audio Transcript</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="modelInfo">Whisper</span>
+        </div>
+        <div class="card-body" id="transcriptBody">
+          <p style="color: var(--text-muted);">No active recording. Press "Record Meeting" or pick an earlier meeting from the sidebar.</p>
+        </div>
+      </section>
+
+      <!-- AI Summary & Action Items -->
+      <section class="card">
+        <div class="card-header">
+          <span>AI Summary & Action Items</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="ollamaInfo">Ollama</span>
+        </div>
+        <div class="card-body" id="summaryBody">
+          <h4 style="margin-bottom: 8px; color: var(--accent);">Executive Summary</h4>
+          <p id="summaryText" style="color: var(--text-muted); margin-bottom: 20px;">Summary will appear here after the meeting is processed.</p>
+          
+          <h4 style="margin-bottom: 8px; color: var(--accent);">Action Items</h4>
+          <div id="actionItemsList">
+            <span style="color: var(--text-muted); font-size: 0.85rem;">No action items yet.</span>
+          </div>
+
+          <h4 style="margin-top: 20px; margin-bottom: 8px; color: var(--accent);">Key Topics</h4>
+          <div id="topicsList"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-box">
+      <h3>Settings</h3>
+      <div class="form-group">
+        <label>Ollama Endpoint</label>
+        <input type="text" id="settingOllamaEndpoint" value="http://localhost:11434">
+      </div>
+      <div class="form-group">
+        <label>Ollama Model</label>
+        <input type="text" id="settingOllamaModel" value="llama3:latest">
+      </div>
+      <div class="form-group">
+        <label>Whisper Model</label>
+        <select id="settingWhisperModel">
+          <option value="tiny">tiny (fastest, lowest RAM)</option>
+          <option value="base" selected>base (balanced)</option>
+          <option value="small">small (high accuracy)</option>
+          <option value="medium">medium (best quality)</option>
+        </select>
+      </div>
+      <div style="display:flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+        <button class="btn-settings" id="btnCancelSettings">Cancel</button>
+        <button class="btn-record" style="background:var(--primary); padding:6px 16px;" id="btnSaveSettings">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // WebView2 Bridge RPC Helper
+    const rpc = {
+      pending: new Map(),
+      invoke(command, payload = {}) {
+        return new Promise((resolve, reject) => {
+          const id = Math.random().toString(36).substring(2);
+          this.pending.set(id, { resolve, reject });
+          if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage(JSON.stringify({ id, command, payload }));
+          } else {
+            console.warn('[RPC Mock] Calling:', command, payload);
+            // Mock fallback when running outside WebView2
+            setTimeout(() => {
+              if (command === 'api_get_meetings') resolve([]);
+              else resolve(true);
+            }, 100);
+          }
+        });
+      }
+    };
+
+    if (window.chrome && window.chrome.webview) {
+      window.chrome.webview.addEventListener('message', (event) => {
+        const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (msg.type === 'event') {
+          handleEvent(msg.event, msg.data);
+          return;
+        }
+        if (msg.id && rpc.pending.has(msg.id)) {
+          const { resolve, reject } = rpc.pending.get(msg.id);
+          rpc.pending.delete(msg.id);
+          if (msg.status === 'ok') resolve(msg.data);
+          else reject(new Error(msg.error || 'RPC error'));
+        }
+      });
+    }
+
+    // State
+    let isRecording = false;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+
+    // Elements
+    const btnRecord = document.getElementById('btnRecord');
+    const recordText = document.getElementById('recordText');
+    const recordTimer = document.getElementById('recordTimer');
+    const audioBar = document.getElementById('audioBar');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const meetingsList = document.getElementById('meetingsList');
+    const transcriptBody = document.getElementById('transcriptBody');
+    const summaryText = document.getElementById('summaryText');
+    const actionItemsList = document.getElementById('actionItemsList');
+    const topicsList = document.getElementById('topicsList');
+
+    // Load Meetings
+    async function refreshMeetings() {
+      try {
+        const meetings = await rpc.invoke('api_get_meetings');
+        meetingsList.innerHTML = '';
+        if (meetings && meetings.length > 0) {
+          meetings.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'meeting-item';
+            const dateStr = new Date(m.CreatedAt).toLocaleDateString();
+            item.innerHTML = `
+              <div class="meeting-item-title">${m.Title}</div>
+              <div class="meeting-item-meta">
+                <span>${dateStr}</span>
+                <span>${Math.round(m.DurationSeconds)}s</span>
+              </div>
+            `;
+            item.onclick = () => loadMeeting(m.Id);
+            meetingsList.appendChild(item);
+          });
+        } else {
+          meetingsList.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;padding:8px;">No recordings yet.</div>';
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadMeeting(id) {
+      const meeting = await rpc.invoke('api_get_meeting', { id });
+      if (!meeting) return;
+
+      statusIndicator.textContent = `Viewing: ${meeting.Title}`;
+      transcriptBody.innerHTML = '';
+
+      if (meeting.Segments && meeting.Segments.length > 0) {
+        meeting.Segments.forEach(s => addTranscriptSegment(s));
+      } else {
+        transcriptBody.innerHTML = '<p style="color: var(--text-muted);">No transcript available.</p>';
+      }
+
+      summaryText.textContent = meeting.Summary || 'No summary generated.';
+      actionItemsList.innerHTML = '';
+      if (meeting.ActionItems && meeting.ActionItems.length > 0) {
+        meeting.ActionItems.forEach(ai => {
+          const div = document.createElement('div');
+          div.className = 'action-item';
+          div.innerHTML = `<input type="checkbox"> <span>${ai}</span>`;
+          actionItemsList.appendChild(div);
+        });
+      }
+
+      topicsList.innerHTML = '';
+      if (meeting.KeyTopics && meeting.KeyTopics.length > 0) {
+        meeting.KeyTopics.forEach(t => {
+          const span = document.createElement('span');
+          span.className = 'topic-tag';
+          span.textContent = t;
+          topicsList.appendChild(span);
+        });
+      }
+    }
+
+    function addTranscriptSegment(s) {
+      const div = document.createElement('div');
+      div.className = 'transcript-segment';
+      const m = Math.floor(s.StartSeconds / 60).toString().padStart(2, '0');
+      const sec = Math.floor(s.StartSeconds % 60).toString().padStart(2, '0');
+      div.innerHTML = `
+        <div class="segment-time">[${m}:${sec}] ${s.Speaker || 'Speaker'}</div>
+        <div>${s.Text}</div>
+      `;
+      transcriptBody.appendChild(div);
+      transcriptBody.scrollTop = transcriptBody.scrollHeight;
+    }
+
+    // Recording Toggle
+    btnRecord.addEventListener('click', async () => {
+      if (!isRecording) {
+        // Start
+        await rpc.invoke('api_start_recording');
+        isRecording = true;
+        btnRecord.classList.add('recording');
+        recordText.textContent = 'Stop Recording';
+        statusIndicator.textContent = 'Recording WASAPI Loopback + Mic...';
+        transcriptBody.innerHTML = '';
+        secondsElapsed = 0;
+        timerInterval = setInterval(() => {
+          secondsElapsed++;
+          const h = Math.floor(secondsElapsed / 3600).toString().padStart(2, '0');
+          const m = Math.floor((secondsElapsed % 3600) / 60).toString().padStart(2, '0');
+          const s = (secondsElapsed % 60).toString().padStart(2, '0');
+          recordTimer.textContent = `${h}:${m}:${s}`;
+        }, 1000);
+      } else {
+        // Stop
+        clearInterval(timerInterval);
+        btnRecord.classList.remove('recording');
+        recordText.textContent = 'Record Meeting';
+        statusIndicator.textContent = 'Processing with Whisper & Ollama...';
+        isRecording = false;
+        audioBar.style.width = '0%';
+        await rpc.invoke('api_stop_recording');
+        await refreshMeetings();
+      }
+    });
+
+    // Bridge Events
+    function handleEvent(name, data) {
+      if (name === 'audio_level') {
+        const pct = Math.min(100, Math.round(data.level * 200));
+        audioBar.style.width = `${pct}%`;
+      } else if (name === 'segment') {
+        addTranscriptSegment(data);
+      } else if (name === 'transcription_status') {
+        statusIndicator.textContent = data.status;
+      } else if (name === 'status_update') {
+        statusIndicator.textContent = `${data.status}...`;
+      } else if (name === 'meeting_completed') {
+        statusIndicator.textContent = 'Ready';
+        loadMeeting(data.Id);
+        refreshMeetings();
+      }
+    }
+
+    // Settings Modal
+    const settingsModal = document.getElementById('settingsModal');
+    document.getElementById('btnSettings').onclick = async () => {
+      const modelCfg = await rpc.invoke('api_get_model_config');
+      const transCfg = await rpc.invoke('api_get_transcript_config');
+      if (modelCfg) {
+        document.getElementById('settingOllamaEndpoint').value = modelCfg.endpoint || 'http://localhost:11434';
+        document.getElementById('settingOllamaModel').value = modelCfg.selectedModel || 'llama3:latest';
+      }
+      if (transCfg) {
+        document.getElementById('settingWhisperModel').value = transCfg.model || 'base';
+      }
+      settingsModal.classList.add('open');
+    };
+    document.getElementById('btnCancelSettings').onclick = () => settingsModal.classList.remove('open');
+    document.getElementById('btnSaveSettings').onclick = async () => {
+      await rpc.invoke('api_save_model_config', {
+        endpoint: document.getElementById('settingOllamaEndpoint').value,
+        selectedModel: document.getElementById('settingOllamaModel').value,
+        autoSummarize: true
+      });
+      await rpc.invoke('api_save_transcript_config', {
+        model: document.getElementById('settingWhisperModel').value
+      });
+      settingsModal.classList.remove('open');
+    };
+
+    // Initial load
+    refreshMeetings();
+  </script>
+</body>
+</html>

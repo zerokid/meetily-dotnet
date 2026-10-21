@@ -1,0 +1,38 @@
+# Visual Studio / .NET
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+publish/
+dist/
+
+# Whisper Models & Large binaries
+models/*.bin
+*.wav
+*.mp3
+meetily.db
+meetily.db-shm
+meetily.db-wal
+
+# Node / Frontend
+node_modules/
+.next/
+out/
+.env.local
+
+# OS Files
+.DS_Store
+Thumbs.db
